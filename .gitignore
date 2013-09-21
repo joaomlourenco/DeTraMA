@@ -4,3 +4,6 @@
 *.jar
 *.war
 *.ear
+
+# Mac specific files #
+.DS_Store
