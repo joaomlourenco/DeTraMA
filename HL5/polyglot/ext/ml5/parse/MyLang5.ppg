@@ -1,0 +1,42 @@
+// Assumes polyglot.jar is in classpath
+include "jl5.cup"
+
+package polyglot.ext.ml5.parse;
+
+import polyglot.ext.ml5.types.MyLang5TypeSystem;
+import polyglot.ext.ml5.ast.MyLang5NodeFactory;
+import polyglot.ext.jl.ast.*;
+import polyglot.ext.jl.parse.Name;
+
+import polyglot.ext.jl5.parse.JL5Name;
+import polyglot.ext.jl5.parse.ConstructorDeclarator;
+import polyglot.ext.jl5.parse.MethodDeclarator;
+
+import polyglot.ext.ml5.ast.AtomicBlock;
+
+
+parser Grm extends polyglot.ext.jl5.parse.Grm {:
+    public final MyLang5TypeSystem ts;
+    public final MyLang5NodeFactory nf;
+
+    public Grm(Lexer l, TypeSystem t, NodeFactory n, ErrorQueue q) {
+        super(l, t, n, q);
+        ts = (MyLang5TypeSystem) t;
+        nf = (MyLang5NodeFactory) n;
+    }
+:};
+
+non terminal AtomicBlock atomic_block;
+terminal Token ATOMIC;
+
+start with goal;
+
+extend statement_without_trailing_substatement ::=
+	atomic_block:a
+            {: RESULT = a; :}
+    ;
+
+atomic_block ::=
+        ATOMIC:a block:b
+            {: RESULT = parser.nf.AtomicBlock(parser.pos(a), b); :}
+	;

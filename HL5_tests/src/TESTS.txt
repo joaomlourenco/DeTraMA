@@ -1,0 +1,127 @@
+For each test we want to know what wrong and what went right.
+Make numbers for:
+	False Positives
+	False Negatives
+	OK
+	Bad Semantic		Anomalies that are in the right place, but do not
+						reflect the anomaly we want to catch
+
+
+
+BBA'08			1 CORRECT WrW : Connection.disconnect()
+					but almost undetected; characterize unavailable methods in
+					order to make it safe
+				1 FALSE POSITIVE RwR : GUI.trySendMsg()
+					this is in place of an undetected RwW. Modify conditions:
+					second reader must not write field of first read
+				1 FALSE NEGATIVE RwW : GUI.trySendMsg()
+					characterize unavailable methods to find it
+
+CA'03/COORD		1 CORRECT RwR : T3.run()
+				1 ARGUABLE RwR : T4.run()
+					paper says this is not an anomaly; by my standard conditionsit is;
+					the example is too abstract to get a feel of whether it is or not.
+					conditions could be slightly changed to eliminate this if it is
+					considered false: RwR -> second reader must not read field of first reader
+				2 FALSE POSITIVES : T4.run()
+					this is a local var problem, would be solved if we had points-to
+					still, lets consider it is shared; in this case, the second false
+					positive is now an anomaly. for the first, if we modify:
+					RwR-> first reader must not read field of second reader
+					the first false positive goes away.
+
+CA'03/LOCAL		1 CORRECT RwW : Local.run()
+				1 ARGUABLE RwR : Local.run() --> COUNTED AS FALSE POSITIVE
+					RwR between (x) and (x.n), this makes no sense in this example.
+					maybe consider them to equivalent access? but wont there be an
+					example where this will lead to false negatives? either way
+					this would not be detected with new rules for RwR. RwW takes
+					'precedence'.
+
+CA'03/NASA		1 CORRECT WrW : Task.run() (interference of Daemon)
+
+CA'04/COORD		1 CORRECT WrW : CoordMain.reset()
+				2 FALSE POSITIVES RwW and WrW : CoordMain.run(), between swap() and reset()
+					this anomaly was introduced by ourselves and not documented in the paper.
+					last operation of swap() could be related with first of reset().
+					slightly modify conditions for RwW and WrW: basically, if the first
+					atom also writes the field of the second, there is no anomaly.
+					this is from all the modifications the one that seems most
+					intuitive and harmless
+
+CA'04/FIG5(BUF)	7 FALSE POSITIVES! all in work(), between next() and add()
+					1 ACCEPTABLE -- RwW (buffer.cell)
+					2 MAKE NO SENSE -- RwR(buffer.head, buffer) and RwR(buffer.cell, buffer)
+						will be eliminated
+					4 OTHERS: may possibly be discarded, depends on modification of conditions
+						RwR(head,tail) : first atom writes head, and second atom writes tail
+						RwR(cell,tail) : second atom writes cell and tail
+						WrW(head,cell) : ?first atom reads cell? -- doesnt seem good
+						WrW(head,tail) : no solution! false positive seems unavoidable
+						[count 4 false positives, 2 fixable and 2 permanent]
+
+CA'04/FIG6		1 FALSE POSITIVE RwW(shared.field) : do_transaction()
+					this is an intentional false positive, only a model checker could
+					avoid it
+				1 FP MAKE NO SENSE RwR(shared.field, shared) : do_transaction()
+					reads are to the same container...
+
+FF'04/StrBuff	1 FALSE NEGATIVE (type???) : append()
+					this seems to be a very serious error, however it does not fit into
+					any of our patterns. note that this is based on unavailable code,
+					maybe with full disclosure the sittuation could be better evaluated
+					anyway, there are two possible modifications between the accesses:
+					if the 'other' string is now shorter, an exception is thrown and the user
+					will know about the error. if string is now longer, or with different
+					chars, no harm should be done, only the first characters will copied
+					instead of the whole string.
+
+PG'03/ACCOUNT	1 CORRECT RwW(balance) : Account.update()
+
+PG'03/JIGSAW	1 CORRECT RwR(closed,entries) : loadResourceStore()
+				1 FALSE POSITIVE WrW(entries,closed) : between loadResourceStore()
+					and shutdown()
+					could easily be avoided because second atom also writes entries
+
+PG'03/OVER		2 FALSE POSITIVES : between init() and get()
+					RwR(keys,keys.length) makes no sense
+					RwR(keys,values) : could be discarded a number of ways:
+						second reader also reads keys
+						first reader also writes keys
+						first reader also writes values
+
+PG'03/UNDER		1 CORRECT RwW(Counter.i)
+					careful: this could become a false negative if we implement
+					all modifications that would benefit the other tests.
+					remember this test was made to force a false negative,
+					if our approach comes too close to related work we will
+					miss this test
+--------------------------------------------------------------------------------
+
+29 TOTAL
+8	(27.6%)	CORRECT
+18	(62.1%)	FALSE POSITIVES
+2	(6.9%)	FALSE NEGATIVES
+1	(3.4%)	Arguable, could be either correct or false positive: RwR(a,b) -- A3 must not R(a)
+
+	18 FALSE POSITIVES
+	5	Redundant Dereferencing
+	3	"Acceptable" (10.3%)
+	8	Modifier
+	2	Permanent (6.9% if total)
+		1 Modify RwR(a,b) -- A3 must not W(a)
+		1 Points-to
+		1 Modify RwR(a,b) -- A1 must not R(b)
+		1 Modify RwW(a)   -- A1 must not W(a)
+		1 Modify WrW(a,b) -- A1 must not W(b)
+		
+		1 "acceptable"
+		1 RwR(a,b) -- A1.W(a) , A3.W(b)
+		1 RwR(a,b) -- A3.W(a,b)
+		2 permanent
+		
+		1 RwW needs model checker
+		1 WrW(a,b) -- A3.W(a)
+		1 RwR(a,b) -- A3.R(a) or A1.W(a) or A1.W(b)
+	
+	5 PERMANENT OR ACCEPTABLE (17.2% of total)

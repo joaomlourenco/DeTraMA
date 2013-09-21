@@ -1,0 +1,63 @@
+SUBJECT: simple test of Fig1 from C.Artho'04
+
+
+
+DOCUMENTED ANOMALIES: reset() operation is not atomic; threads could observe
+inconsistent states.
+
+
+
+EXPECTED RESULTS: anomaly should be reported correctly, WrW.
+aditionally, more anomalies could be reported, since we have swap() followed by
+reset(), accessing the same fields. these would be false positives.
+
+
+
+RESULTS:
+as expected, the anomaly was detected, along with false positives. if we adjust our pattern
+slightly, they could go away, but we must make sure this does not bring more problems.
+
+$$METHOD$$ method public void run():cartho_04.coord.CoordMain
++--------+
+|  ATOM  |	CoordMain.atom.java:24,2-8
+|   R: cartho_04.coord.CoordMain.Coord.y (1)
+|   R: cartho_04.coord.CoordMain.coord (2)
+|   R: cartho_04.coord.CoordMain.Coord.x (1)
+|   W: cartho_04.coord.CoordMain.Coord.y (1)
+|   W: cartho_04.coord.CoordMain.Coord.x (1)
++--------+
+    |
+    |
++--------+
+|  ATOM  |	CoordMain.atom.java:32,2-8
+|   W: cartho_04.coord.CoordMain.Coord.x (1)
++--------+
+    |
+    |
++--------+
+|  ATOM  |	CoordMain.atom.java:35,2-8
+|   W: cartho_04.coord.CoordMain.Coord.y (1)
++--------+
+
+
+$$METHOD$$ method public static void main(java.lang.String[]):cartho_04.coord.CoordMain
+trace is null!
+
+
+
+Anomaly [atom1=CoordMain.atom.java:24,2-8, atom2=CoordMain.atom.java:32,2-8, threat=CoordMain.atom.java:24,2-8] WrW [field1=cartho_04.coord.CoordMain.Coord.y, field2=cartho_04.coord.CoordMain.Coord.x]
+Anomaly [atom1=CoordMain.atom.java:24,2-8, atom2=CoordMain.atom.java:32,2-8, threat=CoordMain.atom.java:24,2-8] RwW [field=cartho_04.coord.CoordMain.Coord.x]
+Anomaly [atom1=CoordMain.atom.java:24,2-8, atom2=CoordMain.atom.java:32,2-8, threat=CoordMain.atom.java:32,2-8] RwW [field=cartho_04.coord.CoordMain.Coord.x]
+Anomaly [atom1=CoordMain.atom.java:32,2-8, atom2=CoordMain.atom.java:35,2-8, threat=CoordMain.atom.java:24,2-8] WrW [field1=cartho_04.coord.CoordMain.Coord.x, field2=cartho_04.coord.CoordMain.Coord.y]
+
+
+
+IDEA:
+slightly adjust requirements for anomaly:
+
+	RwW: consider R(a),,W(a) || W(a) , if first atom (reader) also writes a, then no anomaly
+	
+	WrW: consider W(a),,W(b) || R(a) , if first writer also writes b, no anomaly
+
+in this test we could eliminate false positives without damage.
+see how it goes in other tests.
